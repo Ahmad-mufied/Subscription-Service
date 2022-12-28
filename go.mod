@@ -2,6 +2,8 @@ module final-project
 
 go 1.19
 
+require github.com/golang/protobuf v1.5.2
+
 require (
 	github.com/alexedwards/scs/redisstore v0.0.0-20221223131519-238b052508b6 // indirect
 	github.com/alexedwards/scs/v2 v2.5.0 // indirect
@@ -17,4 +19,5 @@ require (
 	github.com/jackc/pgx/v4 v4.17.2 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/text v0.3.7 // indirect
+	google.golang.org/protobuf v1.26.0 // indirect
 )
