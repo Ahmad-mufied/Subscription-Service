@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"final-project/data/data"
 	"fmt"
 	"log"
 	"net/http"
@@ -30,8 +31,8 @@ func main() {
 	session := initSession()
 
 	// create loggers
-	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate | log.Ltime)
-	errorLog := log.New(os.Stdout, "ERROR\t", log.Ldate | log.Ltime)
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	errorLog := log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime)
 
 	//? create channels
 
@@ -40,12 +41,12 @@ func main() {
 
 	//? set up the application config
 	app := Config{
-		Session: session,
-		DB: db,
-		InfoLog: infoLog,
+		Session:  session,
+		DB:       db,
+		InfoLog:  infoLog,
 		ErrorLog: errorLog,
-		Wait: &wg,
-
+		Wait:     &wg,
+		Models:   data.New(db),
 	}
 
 	//? set up mail
@@ -60,7 +61,7 @@ func main() {
 func (app *Config) serve() {
 	// start http server
 	srv := &http.Server{
-		Addr: fmt.Sprintf(":%s", webPort),
+		Addr:    fmt.Sprintf(":%s", webPort),
 		Handler: app.routes(),
 	}
 	err := srv.ListenAndServe()
@@ -114,7 +115,7 @@ func openDB(dsn string) (*sql.DB, error) {
 
 	err = db.Ping()
 	if err != nil {
-		 return nil, err
+		return nil, err
 	}
 
 	return db, nil
@@ -129,7 +130,7 @@ func initSession() *scs.SessionManager {
 	session.Cookie.Persist = true
 	session.Cookie.SameSite = http.SameSiteLaxMode
 	session.Cookie.Secure = true
-	
+
 	return session
 }
 
