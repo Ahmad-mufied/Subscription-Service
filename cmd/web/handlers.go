@@ -11,7 +11,49 @@ func (app *Config) LoginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Config) PostLoginPage(w http.ResponseWriter, r *http.Request) {
+	_ = app.Session.RenewToken(r.Context())
 
+	// parse form post
+	err := r.ParseForm()
+	if err != nil {
+		app.ErrorLog.Println(err)
+	}
+
+	// get email and password from form post
+	email := r.Form.Get("email")
+	app.InfoLog.Println(email)
+	password := r.Form.Get("password")
+	app.InfoLog.Println(password)
+
+	user, err := app.Models.User.GetByEmail(email)
+	if err != nil {
+		app.Session.Put(r.Context(), "error", "Invalid user.")
+		app.InfoLog.Println(err)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// check password
+	validPassword, err := user.PasswordMatches(password)
+	if err != nil {
+		app.Session.Put(r.Context(), "error", "Invalid err.")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	if !validPassword {
+		app.Session.Put(r.Context(), "error", "Invalid pw.")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	app.Session.Put(r.Context(), "flash", "Successful login!")
+	// okay , so log user in
+	app.Session.Put(r.Context(), "userID", user.ID)
+	app.Session.Put(r.Context(), "user", user)
+
+	// redirect the user
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (app *Config) Logout(w http.ResponseWriter, r *http.Request) {
@@ -27,5 +69,5 @@ func (app *Config) PostRegisterPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Config) ActivateAccount(w http.ResponseWriter, r *http.Request) {
-	
+
 }
