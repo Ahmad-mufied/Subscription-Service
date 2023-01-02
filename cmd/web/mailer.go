@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"log"
 	"sync"
 	"time"
 
@@ -84,9 +83,7 @@ func (m *Mail) sendMail(msg Message, errorChan chan error) {
 
 	smtpClient, err := server.Connect()
 	if err != nil {
-		fmt.Println(err)
 		errorChan <- err
-		log.Fatal(err)
 	}
 
 	email := mail.NewMSG()
