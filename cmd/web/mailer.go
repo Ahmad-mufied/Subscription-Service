@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"log"
 	"sync"
 	"time"
 
-	
 	"github.com/vanng822/go-premailer/premailer"
 	mail "github.com/xhit/go-simple-mail/v2"
 )
@@ -74,6 +74,7 @@ func (m *Mail) sendMail(msg Message, errorChan chan error) {
 	server := mail.NewSMTPClient()
 	server.Host = m.Host
 	server.Port = m.Port
+	server.Authentication = 0
 	server.Username = m.Username
 	server.Password = m.Password
 	server.Encryption = m.getEncryption(m.Encryption)
@@ -83,7 +84,9 @@ func (m *Mail) sendMail(msg Message, errorChan chan error) {
 
 	smtpClient, err := server.Connect()
 	if err != nil {
+		fmt.Println(err)
 		errorChan <- err
+		log.Fatal(err)
 	}
 
 	email := mail.NewMSG()
@@ -105,7 +108,7 @@ func (m *Mail) sendMail(msg Message, errorChan chan error) {
 }
 
 func (m *Mail) buildHTMLMessage(msg Message) (string, error) {
-	templateToRender := fmt.Sprintf(".cmd/web/templates/%s.html.gohtml", msg.Template)
+	templateToRender := fmt.Sprintf("./cmd/web/templates/%s.html.gohtml", msg.Template)
 
 	t, err := template.New("email-html").ParseFiles(templateToRender)
 	if err != nil  {
@@ -127,7 +130,7 @@ func (m *Mail) buildHTMLMessage(msg Message) (string, error) {
 }
 
 func (m *Mail) buildPlainTextMessage(msg Message) (string, error) {
-	templateToRender := fmt.Sprintf(".cmd/web/templates/%s.plain.gohtml", msg.Template)
+	templateToRender := fmt.Sprintf("./cmd/web/templates/%s.plain.gohtml", msg.Template)
 
 	t, err := template.New("email-plain").ParseFiles(templateToRender)
 	if err != nil  {
