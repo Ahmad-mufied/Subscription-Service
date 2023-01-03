@@ -22,7 +22,7 @@ services:
       - "6379:6379"
     restart: always
     volumes:
-      - ./db-data/redis/:/data
+      - ./db-data/redis/:/home/ahmad/Documents/final-project-save/postgresql/data
 
   #  start mailhog
   mailhog:

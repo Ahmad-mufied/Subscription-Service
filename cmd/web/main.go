@@ -24,23 +24,22 @@ import (
 const webPort = "8080"
 
 func main() {
-	//? connect to the database
+	// connect to the database
 	db := initDB()
-	db.Ping()
 
-	//? create sessions
+	// create sessions
 	session := initSession()
 
 	// create loggers
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	errorLog := log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime)
+	errorLog := log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
-	//? create channels
+	// create channels
 
-	//? create waitgroup
+	// create waitgroup
 	wg := sync.WaitGroup{}
 
-	//? set up the application config
+	// set up the application config
 	app := Config{
 		Session:  session,
 		DB:       db,
@@ -50,14 +49,14 @@ func main() {
 		Models:   data.New(db),
 	}
 
-	//? set up mail
+	// set up mail
 	app.Mailer = app.createMail()
-	app.listenForMail()
+	go app.listenForMail()
 
-	//? listen for signals
+	// listen for signals
 	go app.listenForShutdown()
 
-	//? listen for web connections
+	// listen for web connections
 	app.serve()
 }
 
@@ -67,15 +66,15 @@ func (app *Config) serve() {
 		Addr:    fmt.Sprintf(":%s", webPort),
 		Handler: app.routes(),
 	}
+
+	app.InfoLog.Println("Starting web server...")
 	err := srv.ListenAndServe()
 	if err != nil {
 		log.Panic(err)
 	}
-
-	app.InfoLog.Println("Starting web server...")
-
 }
 
+// initDB connects to Postgres and returns a pool of connections
 func initDB() *sql.DB {
 	conn := connectToDB()
 	if conn == nil {
@@ -84,6 +83,8 @@ func initDB() *sql.DB {
 	return conn
 }
 
+// connectToDB tries to connect to postgres, and backs off until a connection
+// is made, or we have not connected after 10 tries
 func connectToDB() *sql.DB {
 	counts := 0
 
@@ -92,9 +93,9 @@ func connectToDB() *sql.DB {
 	for {
 		connection, err := openDB(dsn)
 		if err != nil {
-			log.Println("postgres not yet ready....")
+			log.Println("postgres not yet ready...")
 		} else {
-			log.Println("connected to database!")
+			log.Print("connected to database!")
 			return connection
 		}
 
@@ -102,7 +103,7 @@ func connectToDB() *sql.DB {
 			return nil
 		}
 
-		log.Println("Backing off for 1 second")
+		log.Print("Backing off for 1 second")
 		time.Sleep(1 * time.Second)
 		counts++
 
@@ -110,6 +111,8 @@ func connectToDB() *sql.DB {
 	}
 }
 
+// openDB opens a connection to Postgres, using a DSN read
+// from the environment variable DSN
 func openDB(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -122,11 +125,12 @@ func openDB(dsn string) (*sql.DB, error) {
 	}
 
 	return db, nil
-
 }
 
+// initSession sets up a session, using Redis for session store
 func initSession() *scs.SessionManager {
 	gob.Register(data.User{})
+	
 	// set up session
 	session := scs.New()
 	session.Store = redisstore.New(initRedis())
@@ -138,6 +142,8 @@ func initSession() *scs.SessionManager {
 	return session
 }
 
+// initRedis returns a pool of connections to Redis using the
+// environment variable REDIS
 func initRedis() *redis.Pool {
 	redisPool := &redis.Pool{
 		MaxIdle: 10,
@@ -145,6 +151,7 @@ func initRedis() *redis.Pool {
 			return redis.Dial("tcp", os.Getenv("REDIS"))
 		},
 	}
+
 	return redisPool
 }
 
@@ -166,7 +173,7 @@ func (app *Config) shutdown() {
 	app.InfoLog.Println("closing channels and shutting down application...")
 }
 
-func (app *Config) createMail() Mail{
+func (app *Config) createMail() Mail {
 	// create channels
 	errorChan := make(chan error)
 	mailerChan := make(chan Message, 100)
@@ -178,7 +185,7 @@ func (app *Config) createMail() Mail{
 		Port: 1025,
 		Encryption: "none",
 		FromName: "Info",
-		FromAddress: "info@company.com",
+		FromAddress: "info@mycompany.com",
 		Wait: app.Wait,
 		ErrorChan: errorChan,
 		MailerChan: mailerChan,
