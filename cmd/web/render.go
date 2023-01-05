@@ -1,6 +1,7 @@
 package main
 
 import (
+	"final-project/data/data"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -19,7 +20,7 @@ type TemplateData struct {
 	Error         string
 	Authenticated bool
 	Now           time.Time
-	// User *data.User
+	User          *data.User
 }
 
 func (app *Config) render(w http.ResponseWriter, r *http.Request, t string, td *TemplateData) {
@@ -34,7 +35,7 @@ func (app *Config) render(w http.ResponseWriter, r *http.Request, t string, td *
 	var templatesSlice []string
 	templatesSlice = append(templatesSlice, fmt.Sprintf("%s/%s", pathToTemplates, t))
 
-	for _, x:= range partials {
+	for _, x := range partials {
 		templatesSlice = append(templatesSlice, x)
 	}
 
@@ -56,7 +57,6 @@ func (app *Config) render(w http.ResponseWriter, r *http.Request, t string, td *
 	}
 }
 
-
 func (app *Config) AddDefaultData(td *TemplateData, r *http.Request) *TemplateData {
 	td.Flash = app.Session.PopString(r.Context(), "flash")
 	td.Warning = app.Session.PopString(r.Context(), "warning")
@@ -64,9 +64,15 @@ func (app *Config) AddDefaultData(td *TemplateData, r *http.Request) *TemplateDa
 	if app.isAuthenticated(r) {
 		td.Authenticated = true
 		// TODO - get more more user information
+		user, ok := app.Session.Get(r.Context(), "user").(data.User)
+		if !ok {
+			app.ErrorLog.Println("Cant't get user from session")
+		} else {
+			td.User = &user
+		}
 	}
 	td.Now = time.Now()
-	
+
 	return td
 }
 
