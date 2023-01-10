@@ -182,9 +182,27 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//? generate an invoice
+	//? generate an invoice and email it
+	app.Wait.Add(1)
 
-	//? send an email with the invoice attached
+	go func() {
+		defer app.Wait.Done()
+
+		invoice, err := app.getInvoice(user, plan)
+		if err != nil {
+			// send this to a channel
+			app.ErrorChan <- err
+		}
+
+		msg := Message{
+			To: user.Email,
+			Subject: "Your invoice",
+			Data: invoice,
+			Template: "invoice",
+		}
+
+		app.sendEmail(msg)
+	}()
 
 	//? generate a manual
 
@@ -193,9 +211,13 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 	//? subscribe the user to an account
 
 	//? redirect
-
-
 }
+
+func (app *Config) getInvoice(u data.User, plan *data.Plan) (string, error) {
+	return plan.PlanAmountFormatted, nil
+}
+
+
 
 func (app *Config) ChooseSubscription(w http.ResponseWriter, r *http.Request) {
 
