@@ -169,10 +169,18 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 	//? get the id of plan that is chosen
 	id := r.URL.Query().Get("id")
 
-	planID, _ := strconv.Atoi(id)
+	planID, err := strconv.Atoi(id)
+
+	
+	if err !=  nil {
+		app.ErrorLog.Println("Error getting planid:",err)
+	}
+
+
 
 	//? get the plan from the database
 	plan, err := app.Models.Plan.GetOne(planID)
+	
 	if err != nil {
 		app.Session.Put(r.Context(), "error", "Unable to find plan.")
 		http.Redirect(w, r, "/members/plans", http.StatusSeeOther)
@@ -209,14 +217,14 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 		app.sendEmail(msg)
 	}()
 
-	//? generate a manual
+	//? send an email with the manual attached
 	
 	app.Wait.Add(1)
 	go func() {
 		defer app.Wait.Done()
 
 		pdf := app.generateManual(user, plan)
-		err := pdf.OutputFileAndClose(fmt.Sprintf("./temp/%d_manual.pdf", user.ID))
+		err := pdf.OutputFileAndClose(fmt.Sprintf("./tmp/%d_manual.pdf", user.ID))
 		if err != nil {
 			app.ErrorChan <- err
 			return
@@ -227,7 +235,7 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 			Subject: "Your manual",
 			Data: "Your user manual is attached",
 			AttachmentMap: map[string]string{
-				"Manual.pdf": fmt.Sprintf("./temp/%d_manual.pdf", user.ID),
+				"Manual.pdf": fmt.Sprintf("./tmp/%d_manual.pdf", user.ID),
 			},
 		}
 
@@ -237,9 +245,25 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 		app.ErrorChan <- errors.New("some custome error")
 	}()
 
-	//? send an email with the manual attached
+	
 
 	//? subscribe the user to an account
+
+	err = app.Models.Plan.SubscribeUserToPlan(user, *plan)
+	if err != nil {
+		app.Session.Put(r.Context(), "error", "Error subscribing to plan!")
+		http.Redirect(w, r, "/members/plans", http.StatusSeeOther)
+		return
+	}
+
+	u, err := app.Models.User.GetOne(user.ID)
+	if err != nil {
+		app.Session.Put(r.Context(), "error", "Error getting user from database!")
+		http.Redirect(w, r, "/members/plans", http.StatusSeeOther)
+		return
+	}
+
+	app.Session.Put(r.Context(), "user", u)
 
 	//? redirect
 
@@ -266,11 +290,12 @@ func (app *Config) generateManual(u data.User, plan *data.Plan)  *gofpdf.Fpdf {
 	pdf.SetFont("Arial","", 12)
 	pdf.MultiCell(0, 4, fmt.Sprintf("%s %s", u.FirstName, u.LastName), "", "C", false)
 	pdf.Ln(5)
-	pdf.MultiCell(0, 4, fmt.Sprintf("%s User Guide", u.FirstName), "", "C", false)
+	pdf.MultiCell(0, 4, fmt.Sprintf("%s User Guide", plan.PlanName), "", "C", false)
 	return pdf
 }
 
 func (app *Config) getInvoice(u data.User, plan *data.Plan) (string, error) {
+	app.InfoLog.Println("amount is", plan.PlanAmountFormatted)
 	return plan.PlanAmountFormatted, nil
 }
 

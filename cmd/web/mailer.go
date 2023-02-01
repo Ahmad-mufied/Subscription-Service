@@ -38,8 +38,6 @@ type Message struct {
 	Template      string
 }
 
-// a function to listen for messages on the MailerChan
-
 func (app *Config) listenForMail() {
 	for {
 		select {
@@ -67,7 +65,7 @@ func (m *Mail) sendMail(msg Message, errorChan chan error) {
 	if msg.FromName == "" {
 		msg.FromName = m.FromName
 	}
-
+	
 	if msg.AttachmentMap == nil {
 		msg.AttachmentMap = make(map[string]string)
 	}
@@ -77,7 +75,7 @@ func (m *Mail) sendMail(msg Message, errorChan chan error) {
 	// }
 
 	if len(msg.DataMap) == 0 {
-		msg.Data = make(map[string]any)
+		msg.DataMap = make(map[string]any)
 	}
 
 	msg.DataMap["message"] = msg.Data
@@ -97,7 +95,6 @@ func (m *Mail) sendMail(msg Message, errorChan chan error) {
 	server := mail.NewSMTPClient()
 	server.Host = m.Host
 	server.Port = m.Port
-	server.Authentication = 0
 	server.Username = m.Username
 	server.Password = m.Password
 	server.Encryption = m.getEncryption(m.Encryption)
@@ -169,9 +166,9 @@ func (m *Mail) buildPlainTextMessage(msg Message) (string, error) {
 		return "", err
 	}
 
-	PlainMessage := tpl.String()
+	plainMessage := tpl.String()
 
-	return PlainMessage, nil
+	return plainMessage, nil
 }
 
 func (m *Mail) inlineCSS(s string) (string, error) {
@@ -199,7 +196,7 @@ func (m *Mail) getEncryption(e string) mail.Encryption {
 	case "tls":
 		return mail.EncryptionSTARTTLS
 	case "ssl":
-		return mail.EncryptionNone
+		return mail.EncryptionSSLTLS
 	case "none":
 		return mail.EncryptionNone
 	default:
