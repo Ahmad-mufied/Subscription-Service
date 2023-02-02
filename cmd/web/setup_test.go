@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"encoding/gob"
-	"final-project/data/data"
+	"final-project/data"
 	"log"
 	"net/http"
 	"os"

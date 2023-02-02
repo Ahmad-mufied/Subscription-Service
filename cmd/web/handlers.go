@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"final-project/data/data"
+	"final-project/data"
 	"fmt"
 	"html/template"
 	"net/http"
