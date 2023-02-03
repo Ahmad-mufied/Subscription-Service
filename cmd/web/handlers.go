@@ -45,7 +45,7 @@ func (app *Config) PostLoginPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check password
-	validPassword, err := user.PasswordMatches(password)
+	validPassword, err := app.Models.User.PasswordMatches(password)
 	if err != nil {
 		app.Session.Put(r.Context(), "error", "Invalid err.")
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -54,9 +54,9 @@ func (app *Config) PostLoginPage(w http.ResponseWriter, r *http.Request) {
 
 	if !validPassword {
 		msg := Message{
-			To: email,
+			To:      email,
 			Subject: "Failed log in attempt",
-			Data: "Invalid login attempt!",
+			Data:    "Invalid login attempt!",
 		}
 
 		app.sendEmail(msg)
@@ -96,15 +96,15 @@ func (app *Config) PostRegisterPage(w http.ResponseWriter, r *http.Request) {
 
 	//? Create a user
 	u := data.User{
-		Email: r.Form.Get("email"),
+		Email:     r.Form.Get("email"),
 		FirstName: r.Form.Get("first-name"),
-		LastName: r.Form.Get("last-name"),
-		Password: r.Form.Get("password"),
-		Active: 0,
-		IsAdmin: 0,
+		LastName:  r.Form.Get("last-name"),
+		Password:  r.Form.Get("password"),
+		Active:    0,
+		IsAdmin:   0,
 	}
 
-	_, err = u.Insert(u)
+	_, err = app.Models.User.Insert(u)
 	if err != nil {
 		app.Session.Put(r.Context(), "error", "Unable to create user.")
 		http.Redirect(w, r, "/register", http.StatusSeeOther)
@@ -117,17 +117,17 @@ func (app *Config) PostRegisterPage(w http.ResponseWriter, r *http.Request) {
 	app.InfoLog.Println(signedURL)
 
 	msg := Message{
-		To: u.Email,
-		Subject: "Activate your account",
+		To:       u.Email,
+		Subject:  "Activate your account",
 		Template: "confirmation-email",
-		Data: template.HTML(signedURL),
+		Data:     template.HTML(signedURL),
 	}
 
 	app.sendEmail(msg)
 
 	app.Session.Put(r.Context(), "flash", "Confirmation email sent. Check your email.")
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
-	
+
 }
 
 func (app *Config) ActivateAccount(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +154,7 @@ func (app *Config) ActivateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u.Active = 1
-	err = u.Update()
+	err = app.Models.User.Update(*u)
 	if err != nil {
 		app.Session.Put(r.Context(), "error", "Unable to update user.")
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -171,16 +171,13 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 
 	planID, err := strconv.Atoi(id)
 
-	
-	if err !=  nil {
-		app.ErrorLog.Println("Error getting planid:",err)
+	if err != nil {
+		app.ErrorLog.Println("Error getting planid:", err)
 	}
-
-
 
 	//? get the plan from the database
 	plan, err := app.Models.Plan.GetOne(planID)
-	
+
 	if err != nil {
 		app.Session.Put(r.Context(), "error", "Unable to find plan.")
 		http.Redirect(w, r, "/members/plans", http.StatusSeeOther)
@@ -208,9 +205,9 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 		}
 
 		msg := Message{
-			To: user.Email,
-			Subject: "Your invoice",
-			Data: invoice,
+			To:       user.Email,
+			Subject:  "Your invoice",
+			Data:     invoice,
 			Template: "invoice",
 		}
 
@@ -218,7 +215,7 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	//? send an email with the manual attached
-	
+
 	app.Wait.Add(1)
 	go func() {
 		defer app.Wait.Done()
@@ -231,9 +228,9 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 		}
 
 		msg := Message{
-			To: user.Email,
+			To:      user.Email,
 			Subject: "Your manual",
-			Data: "Your user manual is attached",
+			Data:    "Your user manual is attached",
 			AttachmentMap: map[string]string{
 				"Manual.pdf": fmt.Sprintf("./tmp/%d_manual.pdf", user.ID),
 			},
@@ -244,8 +241,6 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 		// test app error chan
 		app.ErrorChan <- errors.New("some custome error")
 	}()
-
-	
 
 	//? subscribe the user to an account
 
@@ -271,7 +266,7 @@ func (app *Config) SubcribeToPlan(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/members/plans", http.StatusSeeOther)
 }
 
-func (app *Config) generateManual(u data.User, plan *data.Plan)  *gofpdf.Fpdf {
+func (app *Config) generateManual(u data.User, plan *data.Plan) *gofpdf.Fpdf {
 	pdf := gofpdf.New("P", "mm", "Letter", "")
 	pdf.SetMargins(10, 13, 10)
 
@@ -287,7 +282,7 @@ func (app *Config) generateManual(u data.User, plan *data.Plan)  *gofpdf.Fpdf {
 	pdf.SetX(75)
 	pdf.SetY(150)
 
-	pdf.SetFont("Arial","", 12)
+	pdf.SetFont("Arial", "", 12)
 	pdf.MultiCell(0, 4, fmt.Sprintf("%s %s", u.FirstName, u.LastName), "", "C", false)
 	pdf.Ln(5)
 	pdf.MultiCell(0, 4, fmt.Sprintf("%s User Guide", plan.PlanName), "", "C", false)
@@ -298,8 +293,6 @@ func (app *Config) getInvoice(u data.User, plan *data.Plan) (string, error) {
 	app.InfoLog.Println("amount is", plan.PlanAmountFormatted)
 	return plan.PlanAmountFormatted, nil
 }
-
-
 
 func (app *Config) ChooseSubscription(w http.ResponseWriter, r *http.Request) {
 

@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 		InfoLog:       log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime),
 		ErrorLog:      log.New(os.Stdout, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile),
 		Wait:          &sync.WaitGroup{},
-		Models: data.TestNew(nil),
+		Models:        data.TestNew(nil),
 		ErrorChan:     make(chan error),
 		ErrorChanDone: make(chan bool),
 	}
@@ -71,7 +71,6 @@ func TestMain(m *testing.M) {
 
 	os.Exit(m.Run())
 }
-
 
 func getCtx(req *http.Request) context.Context {
 	ctx, err := testApp.Session.Load(req.Context(), req.Header.Get("X-Session"))

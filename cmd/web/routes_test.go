@@ -40,4 +40,3 @@ func routeExist(t *testing.T, routes chi.Router, route string) {
 		t.Errorf("did not find %s in registered routes", route)
 	}
 }
-
